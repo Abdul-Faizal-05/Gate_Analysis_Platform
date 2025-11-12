@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import "./TestCreation.css";
-import { db } from "../../firebase";
-import { collection, addDoc, doc, setDoc, Timestamp } from "firebase/firestore";
+import { toast } from "react-toastify";
 
 const TestCreation = () => {
   const [testName, setTestName] = useState("");
@@ -50,54 +49,20 @@ const TestCreation = () => {
     }
 
     try {
+      // Frontend only - log the test data
       const testDetails = {
         title: testName,
-        startTime: Timestamp.fromDate(new Date(startTime)),
-        endTime: Timestamp.fromDate(new Date(endTime)),
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
         description,
-        createdAt: Timestamp.now(),
+        createdAt: new Date(),
+        questions: questions
       };
 
-      const testRef = await addDoc(collection(db, "Tests"), testDetails);
-      const testId = testRef.id;
+      console.log("Test created (frontend only):", testDetails);
+      toast.success("Test created successfully! (Frontend only)");
 
-      const mcqIds = [];
-      const natIds = [];
-
-      const addQuestions = questions.map(async (questionItem) => {
-        const questionData = {
-          ...questionItem,
-          testId,
-          createdAt: Timestamp.now(),
-        };
-
-        let collectionName;
-        switch (questionItem.type) {
-          case "mcq":
-            collectionName = "MCQ_Questions";
-            break;
-          case "nat":
-            collectionName = "NAT_Questions";
-            break;
-          default:
-            throw new Error(`Unknown question type: ${questionItem.type}`);
-        }
-
-        const docRef = await addDoc(collection(db, collectionName), questionData);
-        if (questionItem.type === "mcq") mcqIds.push(docRef.id);
-        else natIds.push(docRef.id);
-      });
-
-      await Promise.all(addQuestions);
-
-      await setDoc(doc(db, "Tests", testId), {
-        ...testDetails,
-        id: testId,
-        mcqQuestions: mcqIds,
-        natQuestions: natIds,
-      });
-
-      alert("Test and Questions added successfully!");
+      // Reset form
       setTestName("");
       setStartTime("");
       setEndTime("");

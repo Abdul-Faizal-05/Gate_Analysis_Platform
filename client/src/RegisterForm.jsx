@@ -2,15 +2,11 @@ import React, { useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import "./Register.css";
-import {auth, db} from "./firebase";
-import { setDoc,doc } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const RegisterForm = () => {
   const [userType, setUserType] = useState("student");
-  const [formData, setFormData] = useState({ name: "",userName: "",email: "", password: "" });
+  const [formData, setFormData] = useState({ name: "", profileName: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -27,63 +23,21 @@ const RegisterForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const role = userType;
-    const{name,profileName,email,password} = formData;
+    const { name, profileName, email, password } = formData;
 
     const profileNameRegex = /^[a-zA-Z0-9_]+$/;
     if (!profileNameRegex.test(profileName)) {
-    toast.warning("Profile name must contain only letters, numbers, and underscores.");
-    return;
-    }
-
-    const allowedDomain = "citchennai.net"; 
-    const emailDomain = email.split("@")[1];
-
-    if (emailDomain !== allowedDomain) {
-      toast.warning("Only users with a '@citchennai.net' email can register.");
+      toast.warning("Profile name must contain only letters, numbers, and underscores.");
       return;
     }
 
-    try{
-
-      const isProfileNameTaken = async (profileName) => {
-        const studentsRef = collection(db, "Students");
-        const teachersRef = collection(db, "Teachers");
-      
-        const studentQuery = query(studentsRef, where("ProfileName", "==", profileName));
-        const teacherQuery = query(teachersRef, where("ProfileName", "==", profileName));
-      
-        const studentSnap = await getDocs(studentQuery);
-        const teacherSnap = await getDocs(teacherQuery);
-      
-        return !studentSnap.empty || !teacherSnap.empty;
-      };
-
-      if (await isProfileNameTaken(profileName)) {
-        toast.warning("Profile name is already taken. Please choose another.");
-        return;
-      }
-      
-      await createUserWithEmailAndPassword(auth,email,password);
-      const user = auth.currentUser;
-      console.log(user);
-      if(user){
-        const collectionName = userType === "student" ? "Students" : "Teachers";
-        await setDoc(doc(db,collectionName,user.uid),{
-          Email:user.email,
-          Name:name,
-          ProfileName: profileName,
-          Role:role,
-          Uid:user.uid
-        });
-      }
-      console.log("User Registered Successfully");
-      toast.success("Registered Successfully!")
+    // Frontend-only validation (no backend)
+    if (name && profileName && email && password) {
+      console.log("User Registered (Frontend only):", { name, profileName, email, userType });
+      toast.success("Registered Successfully! (Frontend only)");
       navigate("/home");
-    }
-    catch(error){
-      console.log(error.message);
-      toast.warning(error.message);
+    } else {
+      toast.warning("Please fill in all fields");
     }
   };
 

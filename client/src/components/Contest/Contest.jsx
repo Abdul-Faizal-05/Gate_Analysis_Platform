@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase';
-import { collection, query, orderBy, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../../firebase';
 import { FaTrophy, FaBullseye, FaUsers, FaClock } from 'react-icons/fa';
 import './Contest.css';
 import TestResultsModal from './TestResultsModal';
@@ -17,33 +14,51 @@ const Contest = () => {
     const [selectedTest, setSelectedTest] = useState(null);
     const [showResults, setShowResults] = useState(false);
     const navigate = useNavigate();
-    const currentUser = auth.currentUser;
+    const currentUser = { uid: 'demo-user' }; // Mock user
 
     useEffect(() => {
-        // Listen for tests
-        const testsRef = collection(db, 'Tests');
-        const q = query(testsRef, orderBy('startTime', 'desc'));
-        
-        const unsubscribe = onSnapshot(q, async (snapshot) => {
-            const testsList = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                startTime: doc.data().startTime?.toDate(),
-                endTime: doc.data().endTime?.toDate()
-            }));
-            setTests(testsList);
+        // Generate mock tests
+        const mockTests = generateMockTests();
+        setTests(mockTests);
 
-            // Calculate performance for each test
-            const performanceData = {};
-            for (const test of testsList) {
-                const performance = await calculateTestPerformance(test);
-                performanceData[test.id] = performance;
-            }
-            setTestPerformance(performanceData);
-        });
-
-        return () => unsubscribe();
+        // Calculate performance for each test
+        const performanceData = {};
+        for (const test of mockTests) {
+            const performance = calculateTestPerformance(test);
+            performanceData[test.id] = performance;
+        }
+        setTestPerformance(performanceData);
     }, []);
+
+    const generateMockTests = () => {
+        const now = new Date();
+        return [
+            {
+                id: 'test1',
+                title: 'GATE Practice Test 1',
+                startTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+                endTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+                submissions: [
+                    { userId: 'demo-user', answers: { mcq1: '4', mcq2: '1', nat1: 'Paris', nat2: 'Chennai' } },
+                    { userId: 'user2', answers: { mcq1: '4', mcq2: '2', nat1: 'London', nat2: 'Chennai' } }
+                ]
+            },
+            {
+                id: 'test2',
+                title: 'GATE Practice Test 2',
+                startTime: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+                endTime: new Date(now.getTime() + 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+                submissions: []
+            },
+            {
+                id: 'test3',
+                title: 'GATE Practice Test 3 (Active)',
+                startTime: new Date(now.getTime() - 30 * 60 * 1000),
+                endTime: new Date(now.getTime() + 90 * 60 * 1000),
+                submissions: []
+            }
+        ];
+    };
 
     const getTestStatus = (startTime, endTime) => {
         const now = new Date();
@@ -97,10 +112,8 @@ const Contest = () => {
         return `Starts in: ${days}d ${hours}h ${minutes}m`;
     };
 
-    const calculateTestPerformance = async (test) => {
+    const calculateTestPerformance = (test) => {
         if (!test.submissions || !test.submissions.length) return null;
-
-        console.log('Submissions:', test.submissions); // Log submissions
 
         try {
             let totalParticipants = test.submissions.length;
@@ -109,22 +122,18 @@ const Contest = () => {
             let userAccuracy = null;
 
             const correctAnswers = {
-                mcq1: '4',        // Correct answer for mcq1
-                mcq2: '1',        // Correct answer for mcq2
-                nat1: 'Paris',    // Correct answer for nat1
-                nat2: 'Chennai'   // Correct answer for nat2
+                mcq1: '4',
+                mcq2: '1',
+                nat1: 'Paris',
+                nat2: 'Chennai'
             };
 
-            // Calculate scores based on submissions
             test.submissions.forEach(submission => {
-                console.log('Submission:', submission); // Log each submission
-                console.log('Submission Answers:', submission.answers); // Log submission answers
-
                 if (submission.answers && typeof submission.answers === 'object' && Object.keys(submission.answers).length > 0) {
                     let score = 0;
                     Object.keys(correctAnswers).forEach(key => {
                         if (submission.answers[key] === correctAnswers[key]) {
-                            score += 1; // Increment score for each correct answer
+                            score += 1;
                         }
                     });
                     totalScore += score;
@@ -136,10 +145,7 @@ const Contest = () => {
                 }
             });
 
-            console.log('Total Score:', totalScore); // Log total score
-            console.log('User Score:', userScore); // Log user score
-
-            if (totalParticipants === 0 || !test.submissions[0] || !test.submissions[0].answers || Object.keys(test.submissions[0].answers).length === 0) {
+            if (totalParticipants === 0) {
                 return {
                     averageScore: 0,
                     averageAccuracy: 0,
@@ -151,9 +157,6 @@ const Contest = () => {
 
             const averageScore = totalScore / totalParticipants;
             const averageAccuracy = (totalScore / (totalParticipants * Object.keys(correctAnswers).length)) * 100;
-
-            console.log('Average Score:', averageScore); // Log average score
-            console.log('Average Accuracy:', averageAccuracy); // Log average accuracy
 
             return {
                 averageScore,

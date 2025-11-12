@@ -1,44 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { auth, db } from '../../firebase'; // Make sure db is imported from Firebase config
 import { toast } from 'react-toastify';
 import { FaHome, FaChartLine, FaBook, FaQuestionCircle, FaDatabase, FaSignOutAlt, FaComments, FaTrophy, FaPlus } from 'react-icons/fa';
-import { doc, getDoc } from "firebase/firestore"; // Make sure to import getDoc from Firestore
 import './Navigation.css';
 
-const Navigation = ({ user }) => {
+const Navigation = ({ user, userRole = 'student' }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [role, setRole] = useState(null);
-
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      if (user) {
-        let userRef;
-        const studentRef = doc(db, "Students", user.uid);  // Ensure you're using 'db' here
-        const teacherRef = doc(db, "Teachers", user.uid);  // Ensure you're using 'db' here
-        
-        const studentSnap = await getDoc(studentRef);
-        const teacherSnap = await getDoc(teacherRef);
-        
-        if (studentSnap.exists()) {
-          setRole("student");
-        } else if (teacherSnap.exists()) {
-          setRole("teacher");
-        }
-      }
-    };
-    fetchUserRole();
-  }, [user]);
 
   const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      toast.success("Successfully logged out!");
-      navigate("/");
-    } catch (error) {
-      toast.error("Logout failed. Please try again!");
-    }
+    toast.success("Successfully logged out! (Frontend only)");
+    navigate("/");
   };
 
   // Don't show navigation on landing, login, and register pages
@@ -69,7 +41,7 @@ const Navigation = ({ user }) => {
         </Link>
 
         <div className="nav-links">
-          {(role === 'student' ? studentNavLinks : teacherNavLinks).map(link => (
+          {(userRole === 'student' ? studentNavLinks : teacherNavLinks).map(link => (
             <Link 
               key={link.path}
               to={link.path} 
@@ -87,11 +59,10 @@ const Navigation = ({ user }) => {
               <div className="user-info">
                 <div className="user-avatar-container">
                   <div className="user-avatar">
-                    {user.email[0].toUpperCase()}
+                    {user.email ? user.email[0].toUpperCase() : 'U'}
                   </div>
-                  <div className="custom-tooltip">{user.email}</div>
+                  <div className="custom-tooltip">{user.email || 'User'}</div>
                 </div>
-
               </div>
               <button onClick={handleLogout} className="logout-button">
                 <FaSignOutAlt />

@@ -1,6 +1,67 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+
+// Mock data generator
+const generateMockProblems = () => {
+  const subjects = ['Mathematics', 'Digital Logic', 'Computer Organization', 'Programming', 'Theory of Computation'];
+  const topics = {
+    'Mathematics': ['Calculus', 'Probability', 'Linear Algebra'],
+    'Digital Logic': ['Boolean Algebra', 'Logic Gates', 'Circuits'],
+    'Computer Organization': ['CPU Architecture', 'Memory Systems', 'I/O Systems'],
+    'Programming': ['Time Complexity', 'Data Structures', 'Algorithms'],
+    'Theory of Computation': ['Automata Theory', 'Grammars', 'Turing Machines']
+  };
+  const difficulties = ['Easy', 'Medium', 'Hard'];
+
+  const problems = [];
+  let id = 1;
+
+  subjects.forEach(subject => {
+    topics[subject].forEach(topic => {
+      for (let i = 0; i < 15; i++) {
+        problems.push({
+          id: `P${id.toString().padStart(4, '0')}`,
+          subject,
+          topic,
+          title: `${topic} - Problem ${i + 1}`,
+          description: `This is a practice problem for ${topic}`,
+          text: `Solve this ${topic} problem`,
+          difficulty: difficulties[id % 3],
+          options: [
+            { text: 'Option A', displayText: 'Option A', isCorrect: true },
+            { text: 'Option B', displayText: 'Option B', isCorrect: false },
+            { text: 'Option C', displayText: 'Option C', isCorrect: false },
+            { text: 'Option D', displayText: 'Option D', isCorrect: false }
+          ]
+        });
+        id++;
+      }
+    });
+  });
+
+  return problems;
+};
+
+const generateMockProgress = (problems) => {
+  // Simulate some completed problems
+  const completedProblems = [];
+  const numCompleted = Math.floor(problems.length * 0.3); // 30% completion
+
+  for (let i = 0; i < numCompleted; i++) {
+    const problem = problems[i];
+    completedProblems.push({
+      id: problem.id,
+      subject: problem.subject,
+      topic: problem.topic,
+      score: Math.random() > 0.3 ? 1 : 0, // 70% accuracy
+      attemptedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+    });
+  }
+
+  return {
+    completedProblems,
+    totalProblems: problems.length
+  };
+};
 
 const useProgress = () => {
   const [problems, setProblems] = useState([]);
@@ -11,53 +72,22 @@ const useProgress = () => {
   const subjects = ['Mathematics', 'Digital Logic', 'Computer Organization', 'Programming', 'Theory of Computation'];
 
   useEffect(() => {
-    fetchData();
+    // Simulate data loading
+    const mockProblems = generateMockProblems();
+    const mockProgress = generateMockProgress(mockProblems);
+
+    setProblems(mockProblems);
+    setUserProgress(mockProgress);
+    setLoading(false);
   }, []);
 
   const fetchData = async () => {
-    if (!auth.currentUser) {
-      setLoading(false);
-      return;
-    }
+    // Refresh mock data
+    const mockProblems = generateMockProblems();
+    const mockProgress = generateMockProgress(mockProblems);
 
-    try {
-      // Fetch problems
-      const problemsRef = collection(db, 'problems');
-      try {
-        const problemsSnap = await getDocs(problemsRef);
-        const problemsList = problemsSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setProblems(problemsList);
-      } catch (problemsError) {
-        console.error("Error fetching problems:", problemsError);
-        setError(problemsError);
-      }
-
-      // Fetch user progress
-      try {
-        const progressRef = doc(db, 'userProgress', auth.currentUser.uid);
-        const progressSnap = await getDoc(progressRef);
-        
-        if (progressSnap.exists()) {
-          setUserProgress(progressSnap.data());
-        } else {
-          setUserProgress({
-            completedProblems: [],
-            totalProblems: 0
-          });
-        }
-      } catch (progressError) {
-        console.error("Error fetching user progress:", progressError);
-        setError(progressError);
-      }
-    } catch (error) {
-      console.error("An unknown error occurred:", error);
-      setError(error);
-    } finally {
-      setLoading(false);
-    }
+    setProblems(mockProblems);
+    setUserProgress(mockProgress);
   };
 
   const calculateOverallProgress = () => {
@@ -117,7 +147,7 @@ const useProgress = () => {
 
   const getRecentActivity = () => {
     if (!userProgress?.completedProblems) return [];
-    
+
     return [...userProgress.completedProblems]
       .sort((a, b) => new Date(b.attemptedAt) - new Date(a.attemptedAt))
       .slice(0, 5)
@@ -135,7 +165,6 @@ const useProgress = () => {
       return [];
     }
 
-    // Get all unique topics
     const topics = new Set(problems.map(p => p.topic));
     const topicAnalysis = [];
 
@@ -179,9 +208,8 @@ const useProgress = () => {
       suggestions: []
     };
 
-    // Analyze each topic
     topicAnalysis.forEach(topic => {
-      if (topic.completion > 0) {  // Only analyze attempted topics
+      if (topic.completion > 0) {
         if (topic.accuracy < 60) {
           insights.needsImprovement.push({
             ...topic,
@@ -198,7 +226,6 @@ const useProgress = () => {
       }
     });
 
-    // Find topics with no attempts
     const unattempedTopics = topicAnalysis.filter(t => t.completion === 0);
     if (unattempedTopics.length > 0) {
       insights.suggestions.push({
@@ -208,7 +235,6 @@ const useProgress = () => {
       });
     }
 
-    // Find topics with low completion rate
     const lowCompletionTopics = topicAnalysis.filter(t => t.completion > 0 && t.completion < 30);
     if (lowCompletionTopics.length > 0) {
       insights.suggestions.push({
@@ -218,7 +244,6 @@ const useProgress = () => {
       });
     }
 
-    // Find subjects that need attention
     const subjectProgress = subjects.map(subject => ({
       subject,
       ...calculateSubjectProgress(subject)

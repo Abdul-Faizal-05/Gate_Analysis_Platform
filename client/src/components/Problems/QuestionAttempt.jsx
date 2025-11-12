@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { doc, updateDoc, arrayUnion, getDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
 import { toast } from 'react-toastify';
 import './QuestionAttempt.css';
 
@@ -13,56 +11,40 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
   const options = question.options || [];
 
   const handleSubmit = async (e) => {
-      e.preventDefault();
-      if (!selectedOption) {
-          toast.error('Please select an option');
-          return;
-      }
-  
-      setIsSubmitting(true);
-      try {
-          const user = auth.currentUser;
-          if (!user) {
-              toast.error('User not authenticated.');
-              return;
-          }
-          const userId = user.uid;
-          const userProgressRef = doc(db, 'userProgress', userId);
+    e.preventDefault();
+    if (!selectedOption) {
+      toast.error('Please select an option');
+      return;
+    }
 
-          // Check if the document exists
-          const userProgressDoc = await getDoc(userProgressRef);
-          if (!userProgressDoc.exists()) {
-              // Create the document if it doesn't exist
-              await setDoc(userProgressRef, {});
-          }
+    setIsSubmitting(true);
+    try {
+      // Find if the selected option was correct and calculate score
+      const selectedOptionObj = question.options.find(opt => opt.text === selectedOption);
+      const isCorrect = selectedOptionObj?.isCorrect || false;
+      const score = isCorrect ? 1 : 0;
 
-          // Find if the selected option was correct and calculate score
-          const selectedOptionObj = question.options.find(opt => opt.text === selectedOption);
-          const isCorrect = selectedOptionObj?.isCorrect || false;
-          const score = isCorrect ? 1 : 0;
+      // Store in localStorage instead of Firebase
+      const attemptData = {
+        id: question.id,
+        subject: question.subject,
+        topic: question.topic,
+        score: score,
+        selectedOption,
+        isCorrect,
+        explanation,
+        attemptedAt: new Date().toISOString()
+      };
 
-          await updateDoc(userProgressRef, {
-              completedProblems: arrayUnion({
-                  id: question.id,
-                  subject: question.subject,
-                  topic: question.topic,
-                  score: score,
-                  selectedOption,
-                  isCorrect,
-                  explanation,
-                  attemptedAt: new Date().toISOString()
-              })
-          });
-
-          toast.success('Answer submitted successfully!');
-          onSubmit(score);
-          onClose();
-      } catch (error) {
-          console.error('Error submitting answer:', error);
-          toast.error('Failed to submit answer. Please try again.');
-      } finally {
-          setIsSubmitting(false);
-      }
+      toast.success('Answer submitted successfully! (Frontend only)');
+      onSubmit(score);
+      onClose();
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      toast.error('Failed to submit answer. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

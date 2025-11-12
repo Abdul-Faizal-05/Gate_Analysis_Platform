@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { toast } from 'react-toastify';
 import DiscussionCard from './components/Discussion/DiscussionCard';
 import './Discuss.css';
 
 const Discuss = () => {
   const [discussions, setDiscussions] = useState([]);
   const [newPost, setNewPost] = useState({ title: '', content: '', subject: '' });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showAIChat, setShowAIChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -24,7 +23,7 @@ const Discuss = () => {
     'General'
   ];
 
-  // Effect for fetching discussions
+  // Load mock discussions on mount
   useEffect(() => {
     fetchDiscussions();
   }, []);
@@ -37,61 +36,58 @@ const Discuss = () => {
   }, [chatMessages]);
 
   const fetchDiscussions = async () => {
-    try {
-      const q = query(
-        collection(db, 'discussions'),
-        orderBy('timestamp', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      const discussionData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setDiscussions(discussionData);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching discussions:', err);
-      setError('Failed to load discussions. Please try again later.');
-      setLoading(false);
-    }
+    // Mock discussions data
+    const mockDiscussions = [
+      {
+        id: '1',
+        title: 'How does TCP differ from UDP?',
+        content: 'Can someone explain the key differences between TCP and UDP protocols?',
+        subject: 'Computer Networks',
+        userId: 'user1',
+        userName: 'John Doe',
+        timestamp: new Date(),
+        replies: []
+      },
+      {
+        id: '2',
+        title: 'What is deadlock in OS?',
+        content: 'I need help understanding the concept of deadlock and its prevention.',
+        subject: 'Operating Systems',
+        userId: 'user2',
+        userName: 'Jane Smith',
+        timestamp: new Date(Date.now() - 86400000),
+        replies: []
+      }
+    ];
+    setDiscussions(mockDiscussions);
+    setLoading(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!auth.currentUser) {
-      setError('Please sign in to post discussions');
-      return;
-    }
 
     if (!newPost.title.trim() || !newPost.content.trim() || !newPost.subject) {
       setError('Please fill in all fields');
       return;
     }
 
-    try {
-      const discussionRef = collection(db, 'discussions');
-      await addDoc(discussionRef, {
-        title: newPost.title,
-        content: newPost.content,
-        subject: newPost.subject,
-        userId: auth.currentUser.uid,
-        userName: auth.currentUser.displayName || 'Anonymous',
-        timestamp: serverTimestamp(),
-        replies: []
-      });
+    // Add discussion to local state (frontend only)
+    const newDiscussion = {
+      id: Date.now().toString(),
+      title: newPost.title,
+      content: newPost.content,
+      subject: newPost.subject,
+      userId: 'currentUser',
+      userName: 'Demo User',
+      timestamp: new Date(),
+      replies: []
+    };
 
-      setNewPost({ title: '', content: '', subject: '' });
-      fetchDiscussions();
-      setError(null);
-    } catch (err) {
-      console.error('Error creating discussion:', err);
-      setError('Failed to create discussion. Please try again.');
-    }
+    setDiscussions([newDiscussion, ...discussions]);
+    setNewPost({ title: '', content: '', subject: '' });
+    setError(null);
+    toast.success('Discussion posted! (Frontend only)');
   };
-
-  if (loading) {
-    return <div className="loading">Loading discussions...</div>;
-  }
 
   const handleChatSubmit = async (e) => {
     e.preventDefault();
@@ -101,23 +97,17 @@ const Discuss = () => {
     setChatMessages(prev => [...prev, newMessage]);
     setIsChatLoading(true);
 
-    try {
-      const response = await fetch('http://localhost:5001/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `user_input=${encodeURIComponent(userInput)}`,
-      });
-
-      const data = await response.json();
-      setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (err) {
-      setError('Failed to get AI response. Please try again.');
-    } finally {
-      setUserInput('');
+    // Mock AI response (since backend is removed)
+    setTimeout(() => {
+      const mockResponse = {
+        role: 'assistant',
+        content: 'This is a mock AI response. The backend has been removed, so this is just a placeholder response.'
+      };
+      setChatMessages(prev => [...prev, mockResponse]);
       setIsChatLoading(false);
-    }
+    }, 1000);
+
+    setUserInput('');
   };
 
   return (
@@ -125,7 +115,7 @@ const Discuss = () => {
       <div className="discuss-header">
         <div className="header-content">
           <h1>{showAIChat ? 'AI Assistant' : 'Community Discussions'}</h1>
-          <p>{showAIChat ? 'Get instant help from our AI tutor' : 'Share your doubts and help others learn'}</p>
+          <p>{showAIChat ? 'Get instant help from our AI tutor (Mock)' : 'Share your doubts and help others learn'}</p>
         </div>
         <button 
           className={`toggle-btn ${showAIChat ? 'ai-active' : ''}`}

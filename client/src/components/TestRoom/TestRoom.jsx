@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase';
-import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, Timestamp, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../../firebase';
 import { FaClock } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import './TestRoom.css';
 
 const TestRoom = () => {
@@ -12,64 +10,30 @@ const TestRoom = () => {
     const [currentAnswers, setCurrentAnswers] = useState({});
     const [timeLeft, setTimeLeft] = useState(0);
     const [hasSubmitted, setHasSubmitted] = useState(false);
-    const [userRole, setUserRole] = useState(null); // To store if the user is a student or teacher
-    const currentUser = auth.currentUser;
+    const [userRole] = useState('student'); // Mock user role
+    const currentUser = { uid: 'demo-user' }; // Mock user
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!currentUser) return;
-
-        // Fetch user role from Firestore
-        const checkUserRole = async () => {
-            try {
-                const teacherRef = doc(db, 'Teachers', currentUser.uid);
-                const teacherSnap = await getDoc(teacherRef);
-                
-                if (teacherSnap.exists()) {
-                    setUserRole('teacher'); // User is a teacher
-                } else {
-                    const studentRef = doc(db, 'Students', currentUser.uid);
-                    const studentSnap = await getDoc(studentRef);
-
-                    if (studentSnap.exists()) {
-                        setUserRole('student'); // User is a student
-                    } else {
-                        setUserRole('unknown'); // Unknown role
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching user role:', error);
-            }
+        // Generate mock test
+        const mockTest = {
+            id: 'test1',
+            title: 'GATE Practice Test',
+            startTime: new Date(Date.now() - 30 * 60 * 1000),
+            endTime: new Date(Date.now() + 90 * 60 * 1000),
+            mcqQuestions: ['mcq1', 'mcq2'],
+            natQuestions: ['nat1', 'nat2']
         };
 
-        checkUserRole();
-    }, [currentUser]);
+        const now = Date.now();
+        const startTime = mockTest.startTime.getTime();
+        const endTime = mockTest.endTime.getTime();
 
-    useEffect(() => {
-        const testsRef = collection(db, 'Tests');
-        const q = query(testsRef, orderBy('startTime', 'desc'), limit(1));
-        
-        const unsubscribe = onSnapshot(q, async (snapshot) => {
-            if (!snapshot.empty) {
-                const testData = snapshot.docs[0].data();
-                const testId = snapshot.docs[0].id;
-                
-                const now = Timestamp.now().toMillis();
-                const startTime = testData.startTime.toMillis();
-                const endTime = testData.endTime.toMillis();
-
-                const userSubmission = testData.submissions?.find(submission => submission.userId === currentUser?.uid);
-                if (userSubmission) {
-                    setHasSubmitted(true);
-                } else if (now >= startTime && now <= endTime) {
-                    setActiveTest({ id: testId, ...testData });
-                    setTimeLeft(Math.floor((endTime - now) / 1000));
-                    fetchQuestions(testData.mcqQuestions, testData.natQuestions);
-                }
-            }
-        });
-
-        return () => unsubscribe();
+        if (now >= startTime && now <= endTime) {
+            setActiveTest(mockTest);
+            setTimeLeft(Math.floor((endTime - now) / 1000));
+            fetchQuestions(mockTest.mcqQuestions, mockTest.natQuestions);
+        }
     }, []);
 
     useEffect(() => {
@@ -86,23 +50,27 @@ const TestRoom = () => {
 
     const fetchQuestions = async (mcqIds, natIds) => {
         try {
-            const mcqQuestions = await Promise.all(
-                mcqIds.map(async (id) => {
-                    const docRef = doc(db, 'MCQ_Questions', id);
-                    const docSnap = await getDoc(docRef);
-                    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data(), type: 'mcq' } : null;
-                })
-            );
+            // Generate mock questions
+            const mcqQuestions = mcqIds.map((id, index) => ({
+                id,
+                questionText: `MCQ Question ${index + 1}: What is the answer?`,
+                type: 'mcq',
+                options: ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
+                correctAnswer: 'Option 1',
+                difficulty: 'Medium',
+                topic: 'General'
+            }));
 
-            const natQuestions = await Promise.all(
-                natIds.map(async (id) => {
-                    const docRef = doc(db, 'NAT_Questions', id);
-                    const docSnap = await getDoc(docRef);
-                    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data(), type: 'nat' } : null;
-                })
-            );
+            const natQuestions = natIds.map((id, index) => ({
+                id,
+                questionText: `Fill in the Blank Question ${index + 1}: Enter your answer`,
+                type: 'nat',
+                correctAnswer: 'Answer',
+                difficulty: 'Medium',
+                topic: 'General'
+            }));
 
-            setQuestions([...mcqQuestions, ...natQuestions].filter(q => q !== null));
+            setQuestions([...mcqQuestions, ...natQuestions]);
         } catch (error) {
             console.error('Error fetching questions:', error);
         }
@@ -121,16 +89,15 @@ const TestRoom = () => {
         if (!activeTest || !currentUser || userRole !== 'student') return;
 
         try {
-            const submissionRef = doc(db, 'Tests', activeTest.id);
-            await updateDoc(submissionRef, {
-                submissions: arrayUnion({
-                    userId: currentUser.uid,
-                    answers: currentAnswers,
-                    submittedAt: Timestamp.now()
-                })
+            console.log('Test submitted (frontend only):', {
+                testId: activeTest.id,
+                userId: currentUser.uid,
+                answers: currentAnswers,
+                submittedAt: new Date()
             });
 
             setHasSubmitted(true);
+            toast.success('Test submitted successfully! (Frontend only)');
             navigate('/dashboard');
         } catch (error) {
             console.error("Error submitting test:", error);

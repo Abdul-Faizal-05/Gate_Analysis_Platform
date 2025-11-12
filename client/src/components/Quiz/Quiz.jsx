@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../firebase';
+import { toast } from 'react-toastify';
 import './Quiz.css';
 
 const MAX_QUESTIONS = 100;
@@ -44,36 +43,17 @@ const Quiz = () => {
     try {
       console.log('Fetching questions for subject:', subject);
       setError(null);
-      const q = query(
-        collection(db, 'questions'),
-        where('subject', '==', subject)
-      );
       
-      const querySnapshot = await getDocs(q);
-      console.log('Found', querySnapshot.size, 'questions');
+      // Generate mock questions
+      const mockQuestions = generateMockQuestions(subject, questionCount);
       
-      const fetchedQuestions = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      if (fetchedQuestions.length === 0) {
-        setError('No questions found for this subject. Please initialize the question bank first.');
+      if (mockQuestions.length === 0) {
+        setError('No questions available for this subject.');
         setLoading(false);
         return false;
       }
 
-      if (fetchedQuestions.length < questionCount) {
-        setError(`Not enough questions available. Found ${fetchedQuestions.length} questions, need ${questionCount}.`);
-        setLoading(false);
-        return false;
-      }
-
-      // Randomly select questionCount questions
-      const shuffled = fetchedQuestions.sort(() => 0.5 - Math.random());
-      const selectedQuestions = shuffled.slice(0, questionCount);
-      
-      setQuestions(selectedQuestions);
+      setQuestions(mockQuestions);
       setLoading(false);
       return true;
     } catch (error) {
@@ -82,6 +62,26 @@ const Quiz = () => {
       setLoading(false);
       return false;
     }
+  };
+
+  const generateMockQuestions = (subject, count) => {
+    const questions = [];
+    const topics = ['Basics', 'Intermediate', 'Advanced'];
+    const difficulties = ['Easy', 'Medium', 'Hard'];
+    
+    for (let i = 0; i < count; i++) {
+      questions.push({
+        id: `q${i}`,
+        subject,
+        topic: topics[i % topics.length],
+        difficulty: difficulties[i % difficulties.length],
+        text: `Question ${i + 1} about ${subject}`,
+        options: ['Option A', 'Option B', 'Option C', 'Option D'],
+        correctAnswer: 'Option A'
+      });
+    }
+    
+    return questions;
   };
 
   const startQuiz = async () => {
@@ -137,30 +137,15 @@ const Quiz = () => {
 
   const saveQuizResult = async (finalScore, totalQuestions) => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-
       const timeSpent = duration * 60 - timeLeft;
-      const quizResult = {
-        userId: user.uid,
+      console.log('Quiz result saved (frontend only):', {
         subject: selectedSubject,
         score: finalScore,
         totalQuestions,
         percentage: (finalScore / totalQuestions) * 100,
-        timestamp: serverTimestamp(),
-        timeSpent,
-        timePerQuestion: timeSpent / totalQuestions,
-        answers: Object.entries(answers).map(([index, answer]) => ({
-          questionId: questions[index].id,
-          userAnswer: answer,
-          correctAnswer: questions[index].correctAnswer,
-          isCorrect: answer === questions[index].correctAnswer,
-          topic: questions[index].topic,
-          difficulty: questions[index].difficulty
-        }))
-      };
-
-      await addDoc(collection(db, 'quizResults'), quizResult);
+        timeSpent
+      });
+      toast.success('Quiz completed! (Frontend only)');
     } catch (error) {
       console.error('Error saving quiz result:', error);
     }

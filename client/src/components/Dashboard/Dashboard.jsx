@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Line, Bar, Radar } from 'react-chartjs-2';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '../../firebase';
 import './Dashboard.css';
 import {
   Chart as ChartJS,
@@ -42,26 +40,9 @@ const Dashboard = () => {
 
   const fetchQuizResults = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const q = query(
-        collection(db, 'quizResults'),
-        where('userId', '==', user.uid)
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const results = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-      }));
-
-      // Sort by timestamp
-      results.sort((a, b) => b.timestamp - a.timestamp);
-
-      // Filter by time range if needed
-      const filteredResults = filterByTimeRange(results, selectedTimeRange);
+      // Mock quiz results data
+      const mockResults = generateMockQuizResults();
+      const filteredResults = filterByTimeRange(mockResults, selectedTimeRange);
       setQuizResults(filteredResults);
       setLoading(false);
     } catch (error) {
@@ -69,6 +50,45 @@ const Dashboard = () => {
       setError('Failed to load dashboard data');
       setLoading(false);
     }
+  };
+
+  const generateMockQuizResults = () => {
+    const subjects = ['Computer Networks', 'Operating Systems', 'Database Management', 'Data Structures', 'Algorithms'];
+    const results = [];
+    
+    for (let i = 0; i < 10; i++) {
+      const subject = subjects[i % subjects.length];
+      const percentage = 50 + Math.random() * 40;
+      const answers = generateMockAnswers();
+      
+      results.push({
+        id: `quiz${i}`,
+        subject,
+        percentage,
+        score: Math.round(percentage),
+        timestamp: new Date(Date.now() - i * 24 * 60 * 60 * 1000),
+        timeSpent: Math.floor(Math.random() * 1800) + 600,
+        answers
+      });
+    }
+    
+    return results;
+  };
+
+  const generateMockAnswers = () => {
+    const topics = ['Basics', 'Advanced', 'Theory'];
+    const difficulties = ['easy', 'medium', 'hard'];
+    const answers = [];
+    
+    for (let i = 0; i < 10; i++) {
+      answers.push({
+        topic: topics[i % topics.length],
+        difficulty: difficulties[i % difficulties.length],
+        isCorrect: Math.random() > 0.3
+      });
+    }
+    
+    return answers;
   };
 
   const filterByTimeRange = (results, range) => {
