@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -86,6 +87,10 @@ app.post('/api/register', async (req, res) => {
             });
         }
 
+        // Hash the password before storing
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
         // Insert new user into Supabase
         const { data, error } = await supabase
             .from('users')
@@ -94,7 +99,7 @@ app.post('/api/register', async (req, res) => {
                     name: name,
                     profile_name: profileName,
                     email: email,
-                    password: password,
+                    password: hashedPassword,
                     user_type: userType,
                     created_at: new Date().toISOString()
                 }
@@ -160,8 +165,10 @@ app.post('/api/login', async (req, res) => {
             });
         }
 
-        // Check password (Note: In production, use bcrypt.compare() for hashed passwords)
-        if (user.password !== password) {
+        // Compare the provided password with the hashed password
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
