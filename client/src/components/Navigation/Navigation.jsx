@@ -9,8 +9,10 @@ const Navigation = ({ user, userRole = 'student' }) => {
   const location = useLocation();
 
   const handleLogout = async () => {
-    toast.success("Successfully logged out! (Frontend only)");
-    navigate("/");
+    // Clear user data from localStorage
+    localStorage.removeItem('user');
+    toast.success("Successfully logged out!");
+    navigate("/login");
   };
 
   // Don't show navigation on landing, login, and register pages
@@ -59,9 +61,9 @@ const Navigation = ({ user, userRole = 'student' }) => {
               <div className="user-info">
                 <div className="user-avatar-container">
                   <div className="user-avatar">
-                    {user.email ? user.email[0].toUpperCase() : 'U'}
+                    {user.name ? user.name[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : 'U')}
                   </div>
-                  <div className="custom-tooltip">{user.email || 'User'}</div>
+                  <div className="custom-tooltip">{user.name || user.email || 'User'}</div>
                 </div>
               </div>
               <button onClick={handleLogout} className="logout-button">

@@ -25,19 +25,43 @@ const RegisterForm = () => {
 
     const { name, profileName, email, password } = formData;
 
+    // Frontend validation for profile name
     const profileNameRegex = /^[a-zA-Z0-9_]+$/;
     if (!profileNameRegex.test(profileName)) {
       toast.warning("Profile name must contain only letters, numbers, and underscores.");
       return;
     }
 
-    // Frontend-only validation (no backend)
-    if (name && profileName && email && password) {
-      console.log("User Registered (Frontend only):", { name, profileName, email, userType });
-      toast.success("Registered Successfully! (Frontend only)");
-      navigate("/home");
-    } else {
+    // Basic validation
+    if (!name || !profileName || !email || !password) {
       toast.warning("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          profileName: formData.profileName,
+          email: formData.email,
+          password: formData.password,
+          userType: userType
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        navigate("/login");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast.error("Registration failed. Please check if the server is running.");
     }
   };
 

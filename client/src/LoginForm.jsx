@@ -16,12 +16,37 @@ const LoginForm = () => {
   // Handle form submission (Login)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Frontend-only validation
-    if (formData.email && formData.password) {
-      toast.success("Login successful! (Frontend only)");
-      navigate("/home"); // Redirect to homepage
-    } else {
+
+    // Basic validation
+    if (!formData.email || !formData.password) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store user data in localStorage for session management
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        toast.success(data.message);
+        navigate("/home"); // Redirect to homepage
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Login failed. Please check if the server is running.");
     }
   };
 

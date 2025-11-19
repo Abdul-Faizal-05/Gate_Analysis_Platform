@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -18,9 +18,19 @@ import TestCreation from "./components/TestCreation/TestCreation";
 import Home2 from "./Home2";
 
 function App() {
-  // Mock user state (no authentication)
-  const [user] = useState({ email: "demo@example.com", name: "Demo User" });
-  const [userRole] = useState("student"); // Default role
+  // Get user from localStorage (set during login)
+  const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      setUserRole(userData.userType);
+    }
+  }, []);
 
   return (
     <>
