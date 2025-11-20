@@ -16,6 +16,7 @@ import Contest from "./components/Contest/Contest";
 import TestPage from "./components/TestPage/TestPage";
 import TestCreation from "./components/TestCreation/TestCreation";
 import Home2 from "./Home2";
+import Home3 from "./Home3";
 
 function App() {
   // Get user from localStorage (set during login)
@@ -56,6 +57,7 @@ function App() {
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/home" element={<Home user={user} />} />
             <Route path="/home2" element={<Home2 user={user} />} />
+            <Route path="/home3" element={<Home3 user={user} />} />
             <Route path="/problems" element={<Problems />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/dashboard" element={<Dashboard />} />

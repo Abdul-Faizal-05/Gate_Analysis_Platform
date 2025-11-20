@@ -207,6 +207,131 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// Get all problems endpoint
+app.get('/api/problems', async (req, res) => {
+    try {
+        // Fetch all problems
+        const { data: problems, error: problemsError } = await supabase
+            .from('problems')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+        if (problemsError) {
+            console.error('Error fetching problems:', problemsError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch problems',
+                error: problemsError.message
+            });
+        }
+
+        // For each problem, fetch its options or NAT answers based on type
+        const problemsWithDetails = await Promise.all(
+            problems.map(async (problem) => {
+                if (problem.question_type === 'mcq' || problem.question_type === 'msq') {
+                    // Fetch options for MCQ/MSQ
+                    const { data: options, error: optionsError } = await supabase
+                        .from('problem_options')
+                        .select('*')
+                        .eq('problem_id', problem.id)
+                        .order('order_index', { ascending: true });
+
+                    if (optionsError) {
+                        console.error(`Error fetching options for problem ${problem.id}:`, optionsError);
+                        return { ...problem, options: [] };
+                    }
+
+                    return {
+                        ...problem,
+                        options: options.map(opt => ({
+                            text: opt.option_text,
+                            displayText: opt.display_text,
+                            isCorrect: opt.is_correct
+                        }))
+                    };
+                } else if (problem.question_type === 'nat') {
+                    // Fetch NAT answer
+                    const { data: natAnswers, error: natError } = await supabase
+                        .from('nat_answers')
+                        .select('*')
+                        .eq('problem_id', problem.id)
+                        .single();
+
+                    if (natError) {
+                        console.error(`Error fetching NAT answer for problem ${problem.id}:`, natError);
+                        return { ...problem, natAnswer: null };
+                    }
+
+                    return {
+                        ...problem,
+                        natAnswer: {
+                            correctAnswer: natAnswers.correct_answer,
+                            answerText: natAnswers.answer_text,
+                            tolerance: natAnswers.tolerance,
+                            answerUnit: natAnswers.answer_unit
+                        }
+                    };
+                }
+
+                return problem;
+            })
+        );
+
+        console.log(`✅ Fetched ${problemsWithDetails.length} problems from database`);
+
+        res.status(200).json({
+            success: true,
+            problems: problemsWithDetails,
+            total: problemsWithDetails.length
+        });
+
+    } catch (error) {
+        console.error('Error in /api/problems:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while fetching problems',
+            error: error.message
+        });
+    }
+});
+
+// Get problems by subject endpoint
+app.get('/api/problems/subject/:subject', async (req, res) => {
+    try {
+        const { subject } = req.params;
+
+        const { data: problems, error } = await supabase
+            .from('problems')
+            .select('*')
+            .eq('subject', subject)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch problems',
+                error: error.message
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            problems,
+            total: problems.length
+        });
+
+    } catch (error) {
+        console.error('Error fetching problems by subject:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
 app.listen(PORT, async () => {
     console.log('\n🚀 Server started successfully!');
     console.log(`📡 Server running on http://localhost:${PORT}`);
@@ -216,6 +341,7 @@ app.listen(PORT, async () => {
     console.log('\n📋 Available endpoints:');
     console.log(`   POST http://localhost:${PORT}/api/register`);
     console.log(`   POST http://localhost:${PORT}/api/login`);
-    console.log(`   POST http://localhost:${PORT}/api/create-admin`);
+    console.log(`   GET  http://localhost:${PORT}/api/problems`);
+    console.log(`   GET  http://localhost:${PORT}/api/problems/subject/:subject`);
     console.log('\n✨ Server is ready to accept requests!\n');
 });

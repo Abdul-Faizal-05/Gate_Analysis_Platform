@@ -72,22 +72,61 @@ const useProgress = () => {
   const subjects = ['Mathematics', 'Digital Logic', 'Computer Organization', 'Programming', 'Theory of Computation'];
 
   useEffect(() => {
-    // Simulate data loading
-    const mockProblems = generateMockProblems();
-    const mockProgress = generateMockProgress(mockProblems);
-
-    setProblems(mockProblems);
-    setUserProgress(mockProgress);
-    setLoading(false);
+    fetchData();
   }, []);
 
   const fetchData = async () => {
-    // Refresh mock data
-    const mockProblems = generateMockProblems();
-    const mockProgress = generateMockProgress(mockProblems);
+    try {
+      setLoading(true);
+      setError(null);
 
-    setProblems(mockProblems);
-    setUserProgress(mockProgress);
+      // Fetch problems from backend API
+      const response = await fetch('http://localhost:5000/api/problems');
+      const data = await response.json();
+
+      if (data.success) {
+        // Transform backend data to match frontend format
+        const transformedProblems = data.problems.map(problem => ({
+          id: problem.id,
+          subject: problem.subject,
+          topic: problem.topic,
+          title: problem.title,
+          description: problem.description,
+          text: problem.question_text,
+          difficulty: problem.difficulty,
+          questionType: problem.question_type,
+          marks: problem.marks,
+          options: problem.options || [],
+          natAnswer: problem.natAnswer || null,
+          solutionExplanation: problem.solution_explanation,
+          hints: problem.hints
+        }));
+
+        setProblems(transformedProblems);
+
+        // Generate mock progress for now (replace with real API call later)
+        const mockProgress = generateMockProgress(transformedProblems);
+        setUserProgress(mockProgress);
+      } else {
+        // Fallback to mock data if API fails
+        console.warn('API failed, using mock data');
+        const mockProblems = generateMockProblems();
+        const mockProgress = generateMockProgress(mockProblems);
+        setProblems(mockProblems);
+        setUserProgress(mockProgress);
+      }
+    } catch (err) {
+      console.error('Error fetching problems:', err);
+      setError(err.message);
+
+      // Fallback to mock data on error
+      const mockProblems = generateMockProblems();
+      const mockProgress = generateMockProgress(mockProblems);
+      setProblems(mockProblems);
+      setUserProgress(mockProgress);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateOverallProgress = () => {

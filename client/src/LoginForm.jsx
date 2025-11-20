@@ -49,7 +49,11 @@ const LoginForm = ({ onLogin }) => {
         // Navigate based on user role
         if (data.user.userType === 'teacher') {
           navigate("/home2"); // Teacher dashboard
-        } else {
+        }
+        if (data.user.userType === 'admin') {
+          navigate("/home3"); // Admin dashboard
+        } 
+        else {
           navigate("/home"); // Student dashboard
         }
       } else {
