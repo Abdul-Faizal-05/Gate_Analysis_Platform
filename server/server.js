@@ -216,5 +216,6 @@ app.listen(PORT, async () => {
     console.log('\n📋 Available endpoints:');
     console.log(`   POST http://localhost:${PORT}/api/register`);
     console.log(`   POST http://localhost:${PORT}/api/login`);
+    console.log(`   POST http://localhost:${PORT}/api/create-admin`);
     console.log('\n✨ Server is ready to accept requests!\n');
 });

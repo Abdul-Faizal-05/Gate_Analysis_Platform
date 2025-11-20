@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   profile_name VARCHAR(100) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL, -- In production, store hashed passwords
-  user_type VARCHAR(50) NOT NULL CHECK (user_type IN ('student', 'teacher')),
+  user_type VARCHAR(50) NOT NULL CHECK (user_type IN ('student', 'teacher', 'admin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
