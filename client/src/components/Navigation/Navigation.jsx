@@ -4,13 +4,19 @@ import { toast } from 'react-toastify';
 import { FaHome, FaChartLine, FaBook, FaQuestionCircle, FaDatabase, FaSignOutAlt, FaComments, FaTrophy, FaPlus } from 'react-icons/fa';
 import './Navigation.css';
 
-const Navigation = ({ user, userRole = 'student' }) => {
+const Navigation = ({ user, userRole = 'student', onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = async () => {
     // Clear user data from localStorage
     localStorage.removeItem('user');
+    
+    // Call the parent callback to refresh user state
+    if (onLogout) {
+      onLogout();
+    }
+    
     toast.success("Successfully logged out!");
     navigate("/login");
   };
@@ -38,7 +44,7 @@ const Navigation = ({ user, userRole = 'student' }) => {
   return (
     <nav className="main-navigation">
       <div className="nav-container">
-        <Link to="/home" className="nav-logo">
+        <Link to={userRole === 'teacher' ? '/home2' : '/home'} className="nav-logo">
           BreakiT!
         </Link>
 

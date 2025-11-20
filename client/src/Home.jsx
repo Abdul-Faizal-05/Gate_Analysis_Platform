@@ -32,7 +32,7 @@ const Home = ({ user }) => {
 
   return (
     <div className="home-container">
-      <h1>Welcome back, {user?.email}</h1>
+      <h1>Welcome back, {user?.name || user?.email}</h1>
 
       {/* Overall Progress Section */}
       <section className="overall-progress">
@@ -48,7 +48,9 @@ const Home = ({ user }) => {
               <div 
                 className="progress-fill"
                 style={{ width: `${calculateOverallProgress()}%` }}
-              ></div>
+              >
+                <span>{calculateOverallProgress().toFixed(1)}%</span>
+              </div>
             </div>
           </div>
 
@@ -62,7 +64,9 @@ const Home = ({ user }) => {
               <div 
                 className="progress-fill accuracy"
                 style={{ width: `${calculateOverallAccuracy()}%` }}
-              ></div>
+              >
+                <span>{calculateOverallAccuracy().toFixed(1)}%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -77,24 +81,24 @@ const Home = ({ user }) => {
               <h3>{subject}</h3>
               <div className="progress-stats">
                 <div className="progress-item">
-                  <label>Completion</label>
+                  <label data-percentage={`${completion.toFixed(1)}%`}>Completion</label>
                   <div className="progress-bar">
                     <div 
                       className="progress-fill"
                       style={{ width: `${completion}%` }}
                     >
-                      <span>{completion.toFixed(1)}%</span>
+                      {completion > 5 && <span>{completion.toFixed(1)}%</span>}
                     </div>
                   </div>
                 </div>
                 <div className="progress-item">
-                  <label>Accuracy</label>
+                  <label data-percentage={`${accuracy.toFixed(1)}%`}>Accuracy</label>
                   <div className="progress-bar">
                     <div 
                       className="progress-fill accuracy"
                       style={{ width: `${accuracy}%` }}
                     >
-                      <span>{accuracy.toFixed(1)}%</span>
+                      {accuracy > 5 && <span>{accuracy.toFixed(1)}%</span>}
                     </div>
                   </div>
                 </div>

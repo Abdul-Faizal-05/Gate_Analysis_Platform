@@ -32,17 +32,30 @@ function App() {
     }
   }, []);
 
+  // Function to update user state (can be used after logout)
+  const refreshUser = () => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      setUserRole(userData.userType);
+    } else {
+      setUser(null);
+      setUserRole(null);
+    }
+  };
+
   return (
     <>
       <Router>
-        <Navigation user={user} userRole={userRole} />
+        <Navigation user={user} userRole={userRole} onLogout={refreshUser} />
         <div className="app-container">
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginForm />} />
+            <Route path="/login" element={<LoginForm onLogin={refreshUser} />} />
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/home" element={<Home user={user} />} />
-            <Route path="/home2" element={<Home2 />} />
+            <Route path="/home2" element={<Home2 user={user} />} />
             <Route path="/problems" element={<Problems />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/dashboard" element={<Dashboard />} />

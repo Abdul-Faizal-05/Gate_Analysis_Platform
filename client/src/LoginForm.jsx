@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import "./Login.css"; // Import styles
 
-const LoginForm = () => {
+const LoginForm = ({ onLogin }) => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const navigate = useNavigate();
 
@@ -39,8 +39,19 @@ const LoginForm = () => {
         // Store user data in localStorage for session management
         localStorage.setItem('user', JSON.stringify(data.user));
         
+        // Call the parent callback to refresh user state
+        if (onLogin) {
+          onLogin();
+        }
+        
         toast.success(data.message);
-        navigate("/home"); // Redirect to homepage
+        
+        // Navigate based on user role
+        if (data.user.userType === 'teacher') {
+          navigate("/home2"); // Teacher dashboard
+        } else {
+          navigate("/home"); // Student dashboard
+        }
       } else {
         toast.error(data.message);
       }
