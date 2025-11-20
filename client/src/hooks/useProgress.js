@@ -80,13 +80,29 @@ const useProgress = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch problems from backend API
-      const response = await fetch('http://localhost:5000/api/problems');
-      const data = await response.json();
+      // Get user ID from localStorage (set during login)
+      const userId = localStorage.getItem('userId') || 'demo-user';
 
-      if (data.success) {
+      console.log('Fetching problems from API...');
+      // Fetch problems from backend API
+      const problemsResponse = await fetch('http://localhost:5000/api/problems');
+
+      if (!problemsResponse.ok) {
+        throw new Error(`API returned ${problemsResponse.status}`);
+      }
+
+      const problemsData = await problemsResponse.json();
+      console.log('Problems API response:', problemsData);
+
+      // Fetch user progress from backend API
+      console.log(`Fetching progress for user: ${userId}`);
+      const progressResponse = await fetch(`http://localhost:5000/api/progress/${userId}`);
+      const progressData = await progressResponse.json();
+      console.log('Progress API response:', progressData);
+
+      if (problemsData.success && problemsData.problems) {
         // Transform backend data to match frontend format
-        const transformedProblems = data.problems.map(problem => ({
+        const transformedProblems = problemsData.problems.map(problem => ({
           id: problem.id,
           subject: problem.subject,
           topic: problem.topic,
@@ -102,24 +118,35 @@ const useProgress = () => {
           hints: problem.hints
         }));
 
+        console.log(`✅ Loaded ${transformedProblems.length} problems from database`);
         setProblems(transformedProblems);
 
-        // Generate mock progress for now (replace with real API call later)
-        const mockProgress = generateMockProgress(transformedProblems);
-        setUserProgress(mockProgress);
+        // Use real progress data from database
+        if (progressData.success) {
+          console.log(`✅ Loaded progress: ${progressData.completedProblems?.length || 0} completed problems`);
+          setUserProgress({
+            completedProblems: progressData.completedProblems || [],
+            totalProblems: transformedProblems.length,
+            progressSummary: progressData.progressSummary || []
+          });
+        } else {
+          // No progress yet - empty state
+          console.log('ℹ️ No progress data found, starting fresh');
+          setUserProgress({
+            completedProblems: [],
+            totalProblems: transformedProblems.length,
+            progressSummary: []
+          });
+        }
       } else {
-        // Fallback to mock data if API fails
-        console.warn('API failed, using mock data');
-        const mockProblems = generateMockProblems();
-        const mockProgress = generateMockProgress(mockProblems);
-        setProblems(mockProblems);
-        setUserProgress(mockProgress);
+        throw new Error('Invalid API response format');
       }
     } catch (err) {
-      console.error('Error fetching problems:', err);
+      console.error('❌ Error fetching data from API:', err);
       setError(err.message);
 
       // Fallback to mock data on error
+      console.warn('⚠️ Falling back to mock data');
       const mockProblems = generateMockProblems();
       const mockProgress = generateMockProgress(mockProblems);
       setProblems(mockProblems);
@@ -146,11 +173,19 @@ const useProgress = () => {
     }
 
     const subjectProblems = problems.filter(p => p.subject === subject);
+
+    // If no problems exist for this subject in database, return zeros
+    if (subjectProblems.length === 0) {
+      return { completion: 0, accuracy: 0, total: 0, completed: 0 };
+    }
+
     const completedSubjectProblems = userProgress.completedProblems.filter(
       p => p.subject === subject
     );
 
-    const completion = (completedSubjectProblems.length / subjectProblems.length) * 100;
+    const completion = subjectProblems.length > 0
+      ? (completedSubjectProblems.length / subjectProblems.length) * 100
+      : 0;
     const accuracy = completedSubjectProblems.length > 0
       ? (completedSubjectProblems.reduce((acc, curr) => acc + curr.score, 0) / completedSubjectProblems.length) * 100
       : 0;

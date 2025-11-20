@@ -38,21 +38,25 @@ const LoginForm = ({ onLogin }) => {
       if (data.success) {
         // Store user data in localStorage for session management
         localStorage.setItem('user', JSON.stringify(data.user));
-        
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('userName', data.user.name);
+        localStorage.setItem('userEmail', data.user.email);
+        localStorage.setItem('userType', data.user.userType);
+
         // Call the parent callback to refresh user state
         if (onLogin) {
           onLogin();
         }
-        
+
         toast.success(data.message);
-        
+
         // Navigate based on user role
         if (data.user.userType === 'teacher') {
           navigate("/home2"); // Teacher dashboard
         }
         if (data.user.userType === 'admin') {
           navigate("/home3"); // Admin dashboard
-        } 
+        }
         else {
           navigate("/home"); // Student dashboard
         }
@@ -79,7 +83,7 @@ const LoginForm = ({ onLogin }) => {
     <div className="login-container">
       <div className="login-box">
         <h2>Login</h2>
-        
+
         <form className="login-form" onSubmit={handleSubmit}>
           {/* Email Field */}
           <div className="input-group">

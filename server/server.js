@@ -332,6 +332,156 @@ app.get('/api/problems/subject/:subject', async (req, res) => {
     }
 });
 
+// Submit problem attempt endpoint
+app.post('/api/problems/attempt', async (req, res) => {
+    try {
+        const {
+            userId,
+            problemId,
+            selectedOptions,
+            natAnswerValue,
+            natAnswerText,
+            isCorrect,
+            score,
+            timeTaken,
+            userExplanation
+        } = req.body;
+
+        // Validation
+        if (!userId || !problemId || isCorrect === undefined || score === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
+
+        // Get current attempt number for this user-problem combination
+        const { data: existingAttempts, error: countError } = await supabase
+            .from('user_problem_attempts')
+            .select('attempt_number')
+            .eq('user_id', userId)
+            .eq('problem_id', problemId)
+            .order('attempt_number', { ascending: false })
+            .limit(1);
+
+        const attemptNumber = existingAttempts && existingAttempts.length > 0
+            ? existingAttempts[0].attempt_number + 1
+            : 1;
+
+        // Insert the attempt
+        const { data: attempt, error: insertError } = await supabase
+            .from('user_problem_attempts')
+            .insert([{
+                user_id: userId,
+                problem_id: problemId,
+                attempt_number: attemptNumber,
+                selected_options: selectedOptions || null,
+                nat_answer_value: natAnswerValue || null,
+                nat_answer_text: natAnswerText || null,
+                is_correct: isCorrect,
+                score: score,
+                time_taken: timeTaken || null,
+                user_explanation: userExplanation || null,
+                attempted_at: new Date().toISOString()
+            }])
+            .select();
+
+        if (insertError) {
+            console.error('Error inserting attempt:', insertError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to save attempt',
+                error: insertError.message
+            });
+        }
+
+        console.log(`✅ Problem attempt saved for user ${userId}, problem ${problemId}`);
+
+        res.status(201).json({
+            success: true,
+            message: 'Attempt saved successfully',
+            attempt: attempt[0]
+        });
+
+    } catch (error) {
+        console.error('Error in problem attempt:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while saving attempt',
+            error: error.message
+        });
+    }
+});
+
+// Get user progress endpoint
+app.get('/api/progress/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Fetch user's progress summary
+        const { data: progressSummary, error: summaryError } = await supabase
+            .from('user_progress_summary')
+            .select('*')
+            .eq('user_id', userId);
+
+        if (summaryError) {
+            console.error('Error fetching progress summary:', summaryError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch progress',
+                error: summaryError.message
+            });
+        }
+
+        // Fetch user's completed problems with details
+        const { data: attempts, error: attemptsError } = await supabase
+            .from('user_problem_attempts')
+            .select(`
+                *,
+                problems (id, subject, topic, title, difficulty)
+            `)
+            .eq('user_id', userId)
+            .order('attempted_at', { ascending: false });
+
+        if (attemptsError) {
+            console.error('Error fetching attempts:', attemptsError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch attempts',
+                error: attemptsError.message
+            });
+        }
+
+        // Transform attempts data
+        const completedProblems = attempts.map(attempt => ({
+            id: attempt.problem_id,
+            subject: attempt.problems?.subject,
+            topic: attempt.problems?.topic,
+            title: attempt.problems?.title,
+            difficulty: attempt.problems?.difficulty,
+            score: attempt.score,
+            isCorrect: attempt.is_correct,
+            attemptedAt: attempt.attempted_at,
+            attemptNumber: attempt.attempt_number
+        }));
+
+        res.status(200).json({
+            success: true,
+            progressSummary: progressSummary || [],
+            completedProblems,
+            totalAttempts: attempts.length
+        });
+
+    } catch (error) {
+        console.error('Error fetching user progress:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while fetching progress',
+            error: error.message
+        });
+    }
+});
+
 app.listen(PORT, async () => {
     console.log('\n🚀 Server started successfully!');
     console.log(`📡 Server running on http://localhost:${PORT}`);
@@ -343,5 +493,7 @@ app.listen(PORT, async () => {
     console.log(`   POST http://localhost:${PORT}/api/login`);
     console.log(`   GET  http://localhost:${PORT}/api/problems`);
     console.log(`   GET  http://localhost:${PORT}/api/problems/subject/:subject`);
+    console.log(`   POST http://localhost:${PORT}/api/problems/attempt`);
+    console.log(`   GET  http://localhost:${PORT}/api/progress/:userId`);
     console.log('\n✨ Server is ready to accept requests!\n');
 });

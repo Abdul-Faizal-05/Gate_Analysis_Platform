@@ -32,7 +32,7 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation based on question type
     if (isMSQ && selectedOptions.length === 0) {
       toast.error('Please select at least one option');
@@ -57,11 +57,11 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
         const correctOptions = question.options.filter(opt => opt.isCorrect).map(opt => opt.text);
         const selectedSet = new Set(selectedOptions);
         const correctSet = new Set(correctOptions);
-        
+
         isCorrect = selectedOptions.length === correctOptions.length &&
-                   selectedOptions.every(opt => correctSet.has(opt)) &&
-                   correctOptions.every(opt => selectedSet.has(opt));
-        
+          selectedOptions.every(opt => correctSet.has(opt)) &&
+          correctOptions.every(opt => selectedSet.has(opt));
+
         score = isCorrect ? 1 : 0;
       } else if (isNAT) {
         // For NAT: Compare with correct answer (with tolerance if numerical)
@@ -84,17 +84,36 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
         score = isCorrect ? 1 : 0;
       }
 
-      // Store in localStorage instead of Firebase
+      // Store attempt in database
       const attemptData = {
-        id: question.id,
-        subject: question.subject,
-        topic: question.topic,
-        score: score,
-        selectedOption: isMSQ ? selectedOptions : selectedOption,
+        userId: localStorage.getItem('userId') || 'demo-user', // Get from localStorage after login
+        problemId: question.id,
+        selectedOptions: isMSQ ? selectedOptions : (isNAT ? null : [selectedOption]),
+        natAnswerValue: isNAT && !question.natAnswer?.answerText ? parseFloat(selectedOption) : null,
+        natAnswerText: isNAT && question.natAnswer?.answerText ? selectedOption : null,
         isCorrect,
-        explanation,
-        attemptedAt: new Date().toISOString()
+        score,
+        timeTaken: null, // Can add timer later
+        userExplanation: explanation || null
       };
+
+      // Save to backend
+      try {
+        const response = await fetch('http://localhost:5000/api/problems/attempt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(attemptData)
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+          console.error('Failed to save attempt:', result.message);
+        }
+      } catch (saveError) {
+        console.error('Error saving attempt to backend:', saveError);
+      }
 
       // Show appropriate toast based on correctness
       if (isCorrect) {
@@ -138,7 +157,7 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
     <div className="question-attempt-overlay">
       <div className="question-attempt-modal">
         <button className="close-button" onClick={onClose}>×</button>
-        
+
         <div className="question-header">
           <span className={`difficulty ${question.difficulty.toLowerCase()}`}>
             {question.difficulty}
@@ -216,12 +235,12 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
               <h3 style={{ color: '#d32f2f', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span>❌</span> Incorrect Answer - Solution
               </h3>
-              
+
               <div style={{ marginBottom: '15px' }}>
                 <strong style={{ color: '#c62828' }}>Your Answer:</strong>
                 <p style={{ color: '#555', marginTop: '5px' }}>
-                  {isMSQ 
-                    ? submittedAnswer.userAnswer.join(', ') 
+                  {isMSQ
+                    ? submittedAnswer.userAnswer.join(', ')
                     : submittedAnswer.userAnswer}
                 </p>
               </div>
@@ -242,8 +261,8 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
                 <div style={{ marginBottom: '15px' }}>
                   <strong style={{ color: '#2e7d32' }}>Correct Answer:</strong>
                   <p style={{ color: '#555', marginTop: '5px' }}>
-                    {question.natAnswer.answerText 
-                      ? question.natAnswer.answerText 
+                    {question.natAnswer.answerText
+                      ? question.natAnswer.answerText
                       : `${question.natAnswer.correctAnswer} ${question.natAnswer.answerUnit || ''}`}
                   </p>
                 </div>
@@ -270,8 +289,8 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
           )}
 
           <div className="button-container">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="cancel-button"
               onClick={onClose}
               disabled={isSubmitting}
@@ -279,8 +298,8 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
               {showSolution ? 'Close' : 'Cancel'}
             </button>
             {!showSolution && (
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="submit-button"
                 disabled={isSubmitting}
               >
@@ -288,8 +307,8 @@ const QuestionAttempt = ({ question, onClose, onSubmit }) => {
               </button>
             )}
             {showSolution && (
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="submit-button"
                 onClick={() => {
                   onSubmit(0);
