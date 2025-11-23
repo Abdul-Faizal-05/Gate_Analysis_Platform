@@ -23,7 +23,7 @@ const Discuss = () => {
     'General'
   ];
 
-  // Load mock discussions on mount
+  // Load discussions from database
   useEffect(() => {
     fetchDiscussions();
   }, []);
@@ -36,31 +36,24 @@ const Discuss = () => {
   }, [chatMessages]);
 
   const fetchDiscussions = async () => {
-    // Mock discussions data
-    const mockDiscussions = [
-      {
-        id: '1',
-        title: 'How does TCP differ from UDP?',
-        content: 'Can someone explain the key differences between TCP and UDP protocols?',
-        subject: 'Computer Networks',
-        userId: 'user1',
-        userName: 'John Doe',
-        timestamp: new Date(),
-        replies: []
-      },
-      {
-        id: '2',
-        title: 'What is deadlock in OS?',
-        content: 'I need help understanding the concept of deadlock and its prevention.',
-        subject: 'Operating Systems',
-        userId: 'user2',
-        userName: 'Jane Smith',
-        timestamp: new Date(Date.now() - 86400000),
-        replies: []
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/discussions');
+      const data = await response.json();
+
+      if (data.success) {
+        console.log(`✅ Loaded ${data.discussions.length} discussions from database`);
+        setDiscussions(data.discussions);
+      } else {
+        console.error('Failed to fetch discussions:', data.message);
+        toast.error('Failed to load discussions');
       }
-    ];
-    setDiscussions(mockDiscussions);
-    setLoading(false);
+    } catch (error) {
+      console.error('Error fetching discussions:', error);
+      toast.error('Failed to connect to server');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -71,22 +64,42 @@ const Discuss = () => {
       return;
     }
 
-    // Add discussion to local state (frontend only)
-    const newDiscussion = {
-      id: Date.now().toString(),
-      title: newPost.title,
-      content: newPost.content,
-      subject: newPost.subject,
-      userId: 'currentUser',
-      userName: 'Demo User',
-      timestamp: new Date(),
-      replies: []
-    };
+    try {
+      setLoading(true);
+      const userId = localStorage.getItem('userId') || 'demo-user';
 
-    setDiscussions([newDiscussion, ...discussions]);
-    setNewPost({ title: '', content: '', subject: '' });
-    setError(null);
-    toast.success('Discussion posted! (Frontend only)');
+      const response = await fetch('http://localhost:5000/api/discussions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: userId,
+          title: newPost.title,
+          content: newPost.content,
+          subject: newPost.subject
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Discussion posted successfully!');
+        setNewPost({ title: '', content: '', subject: '' });
+        setError(null);
+        // Refresh discussions list
+        await fetchDiscussions();
+      } else {
+        toast.error(data.message || 'Failed to post discussion');
+        setError(data.message);
+      }
+    } catch (error) {
+      console.error('Error posting discussion:', error);
+      toast.error('Failed to connect to server');
+      setError('Failed to post discussion. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChatSubmit = async (e) => {
@@ -174,13 +187,21 @@ const Discuss = () => {
 
           <div className="discussions-list">
             <h2>Recent Discussions</h2>
-            {discussions.map(discussion => (
-              <DiscussionCard
-                key={discussion.id}
-                discussion={discussion}
-                onReplyAdded={fetchDiscussions}
-              />
-            ))}
+            {loading ? (
+              <div className="loading-message">Loading discussions...</div>
+            ) : discussions.length === 0 ? (
+              <div className="no-discussions">
+                <p>No discussions yet. Be the first to start one!</p>
+              </div>
+            ) : (
+              discussions.map(discussion => (
+                <DiscussionCard
+                  key={discussion.id}
+                  discussion={discussion}
+                  onReplyAdded={fetchDiscussions}
+                />
+              ))
+            )}
           </div>
         </>
       ) : (

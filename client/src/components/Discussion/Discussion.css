@@ -42,10 +42,149 @@
 
 .discussion-meta {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
   color: #718096;
   font-size: 0.875rem;
   margin-bottom: 1rem;
+}
+
+.replies-badge, .views-badge {
+  background: #edf2f7;
+  color: #4a5568;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.replies-badge {
+  background: #bee3f8;
+  color: #2c5282;
+}
+
+.views-badge {
+  background: #feebc8;
+  color: #7c2d12;
+}
+
+.accepted-badge {
+  background: #c6f6d5;
+  color: #22543d;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.loading-replies, .loading-message {
+  text-align: center;
+  padding: 2rem;
+  color: #718096;
+  font-style: italic;
+}
+
+.no-discussions {
+  text-align: center;
+  padding: 3rem;
+  color: #718096;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.no-discussions p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.like-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.like-button:hover {
+  background: #f7fafc;
+  color: #e53e3e;
+}
+
+.like-button .heart-filled {
+  color: #e53e3e;
+  animation: heartbeat 0.3s ease;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.like-count {
+  font-weight: 600;
+  min-width: 1.5rem;
+  text-align: left;
+}
+
+.reply-like {
+  margin-left: auto;
+}
+
+.discussion-title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.delete-button {
+  background: transparent;
+  border: none;
+  color: #e53e3e;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+}
+
+.delete-button:hover {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-reply-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.reply-header .reply-content {
+  flex: 1;
+  margin: 0;
 }
 
 .discussion-replies {
