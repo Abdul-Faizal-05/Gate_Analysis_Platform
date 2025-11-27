@@ -158,13 +158,26 @@ const useProgress = () => {
 
   const calculateOverallProgress = () => {
     if (!userProgress?.completedProblems || problems.length === 0) return 0;
-    return (userProgress.completedProblems.length / problems.length) * 100;
+
+    // Count unique problems completed (each problem only once based on first correct attempt)
+    const uniqueCompletedProblems = new Map();
+    userProgress.completedProblems.forEach(attempt => {
+      if (!uniqueCompletedProblems.has(attempt.id) && attempt.isCorrect) {
+        uniqueCompletedProblems.set(attempt.id, attempt);
+      }
+    });
+
+    return (uniqueCompletedProblems.size / problems.length) * 100;
   };
 
   const calculateOverallAccuracy = () => {
     if (!userProgress?.completedProblems || userProgress.completedProblems.length === 0) return 0;
-    const totalScore = userProgress.completedProblems.reduce((acc, curr) => acc + curr.score, 0);
-    return (totalScore / userProgress.completedProblems.length) * 100;
+
+    // Calculate accuracy as ratio of correct submissions to total submissions
+    const totalAttempts = userProgress.completedProblems.length;
+    const correctAttempts = userProgress.completedProblems.filter(attempt => attempt.isCorrect).length;
+
+    return (correctAttempts / totalAttempts) * 100;
   };
 
   const calculateSubjectProgress = (subject) => {
@@ -183,18 +196,30 @@ const useProgress = () => {
       p => p.subject === subject
     );
 
+    // Count unique problems completed (each problem only once based on first correct attempt)
+    const uniqueCompletedProblems = new Map();
+    completedSubjectProblems.forEach(attempt => {
+      if (!uniqueCompletedProblems.has(attempt.id) && attempt.isCorrect) {
+        uniqueCompletedProblems.set(attempt.id, attempt);
+      }
+    });
+
+    // For accuracy, calculate ratio of correct to total submissions
+    const totalAttempts = completedSubjectProblems.length;
+    const correctAttempts = completedSubjectProblems.filter(a => a.isCorrect).length;
+
     const completion = subjectProblems.length > 0
-      ? (completedSubjectProblems.length / subjectProblems.length) * 100
+      ? (uniqueCompletedProblems.size / subjectProblems.length) * 100
       : 0;
-    const accuracy = completedSubjectProblems.length > 0
-      ? (completedSubjectProblems.reduce((acc, curr) => acc + curr.score, 0) / completedSubjectProblems.length) * 100
+    const accuracy = totalAttempts > 0
+      ? (correctAttempts / totalAttempts) * 100
       : 0;
 
     return {
       completion,
       accuracy,
       total: subjectProblems.length,
-      completed: completedSubjectProblems.length
+      completed: uniqueCompletedProblems.size
     };
   };
 
@@ -252,9 +277,21 @@ const useProgress = () => {
       );
 
       if (topicProblems.length > 0) {
-        const completion = (completedTopicProblems.length / topicProblems.length) * 100;
-        const accuracy = completedTopicProblems.length > 0
-          ? (completedTopicProblems.reduce((acc, curr) => acc + curr.score, 0) / completedTopicProblems.length) * 100
+        // Count unique problems completed
+        const uniqueCompletedProblems = new Map();
+        completedTopicProblems.forEach(attempt => {
+          if (!uniqueCompletedProblems.has(attempt.id) && attempt.isCorrect) {
+            uniqueCompletedProblems.set(attempt.id, attempt);
+          }
+        });
+
+        // For accuracy, calculate ratio of correct to total submissions
+        const totalAttempts = completedTopicProblems.length;
+        const correctAttempts = completedTopicProblems.filter(a => a.isCorrect).length;
+
+        const completion = (uniqueCompletedProblems.size / topicProblems.length) * 100;
+        const accuracy = totalAttempts > 0
+          ? (correctAttempts / totalAttempts) * 100
           : 0;
 
         topicAnalysis.push({
@@ -263,9 +300,9 @@ const useProgress = () => {
           completion,
           accuracy,
           total: topicProblems.length,
-          completed: completedTopicProblems.length,
-          averageAttempts: completedTopicProblems.length > 0
-            ? completedTopicProblems.length / topicProblems.length
+          completed: uniqueCompletedProblems.size,
+          averageAttempts: uniqueCompletedProblems.size > 0
+            ? completedTopicProblems.length / uniqueCompletedProblems.size
             : 0
         });
       }
